@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <main>
+    <main className="w-screen h-screen">
       <Editor />
     </main>
   );

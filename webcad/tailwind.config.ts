@@ -13,11 +13,14 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      gridTemplateColumns: {
+        "canvas-container": "minmax(0, auto) minmax(0, auto) minmax(0, 1fr) minmax(0, auto)",
+      },
     },
   },
   plugins: [require("daisyui")],
   daisyui: {
-    themes: true
-  }
+    themes: false,
+  },
 };
 export default config;
