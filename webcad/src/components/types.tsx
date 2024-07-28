@@ -1,3 +1,5 @@
+import { Unit } from "@/units";
+
 export interface ToolAction {
   id: string;
   name: string;
@@ -8,4 +10,11 @@ export interface ToolAction {
 export interface ToolMenuSection {
   id: string;
   tools: ToolAction[];
+}
+
+export interface PageDefinition {
+  name: string;
+  height: number;
+  width: number;
+  unit: Unit;
 }
