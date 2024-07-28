@@ -10,6 +10,7 @@ import {
   DocumentIcon,
 } from "@/components/icons";
 import { ToolMenuSection, ToolAction } from "@/components/types";
+import { Canvas } from "./Canvas";
 
 const PANELS = [
   {
@@ -147,7 +148,7 @@ export const Editor = () => {
       <div className="flex-1">
         <div className="bg-base-100 w-full h-full flex justify-center items-center border-base-300 border-x relative">
           {/* Maybe refactor this so UI is `position: fixed` on top of canvas (might be easier to solve resize issues by just using h-screen / w-screen) */}
-          CANVAS
+          <Canvas className="border-2 border-red-400 w-full h-full"/>
           <div className="flex justify-center absolute left-0 right-0 bottom-4">
             <div className="flex divide-x bg-base-200 p-1 rounded-lg">
               {TOOL_MENU_SECTIONS.map(({ id: index, tools: items }) => {
