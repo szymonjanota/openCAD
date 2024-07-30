@@ -1,10 +1,10 @@
-import { useContext, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer, Line, Rect } from "react-konva";
-import { DrawingContext, useDrawingContext } from "./DrawingContextProvider";
+import { useDrawingContext } from "./DrawingContextProvider";
 import { Vector2D } from "@/utils/vector-2d";
 import { Unit } from "@/units";
 import { useThemeContext } from "./ThemeProvider";
-import { Grid } from "./Grid";
+import { Grid, PageBasedGrid } from "./Grid";
 
 interface Line {
   start: Vector2D; // in drawing scale unit
@@ -72,24 +72,35 @@ export const StageController: React.FC<{
   parentHeight: number;
 }> = ({ parentHeight, parentWidth }) => {
   const theme = useThemeContext();
-  const drawingContext = useDrawingContext();
-
-  const [activePageIndex, setActivePageIndex] = useState(0);
-  const stage = useMemo(
-    () =>
-      STAGE.map((page, index) => ({
-        active: index === activePageIndex,
-        ...page,
-      })),
-    [activePageIndex]
-  );
-  const activePage = stage.find((page) => page.active)!;
-
   const {
     settings: { currentUnit, zoom },
     getPixelsInDrawingSpace,
     getPixelsInPaperSpace,
-  } = drawingContext;
+    setSettings,
+  } = useDrawingContext();
+
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const stage = useMemo(
+    () =>
+      STAGE.map((page, index) => {
+        const height = getPixelsInPaperSpace(page.height, page.unit);
+        const width = getPixelsInPaperSpace(page.width, page.unit);
+        const x = getPixelsInPaperSpace(page.position.x, "cm");
+        const y = getPixelsInPaperSpace(page.position.y, "cm");
+        return {
+          active: index === activePageIndex,
+          konva: {
+            height,
+            width,
+            x,
+            y,
+          },
+          ...page,
+        };
+      }),
+    [activePageIndex, getPixelsInPaperSpace]
+  );
+  const activePage = stage.find((page) => page.active)!;
 
   const [currentOffset, setCurrentOffset] = useState({
     x: 0,
@@ -118,9 +129,56 @@ export const StageController: React.FC<{
     Vector2D.add(centerOffset, viewOffset),
     activePage.scale
   );
+  // console.log(gridOffset);
+
+  const ref = useRef<HTMLElement>();
+
+  useEffect(() => {
+    // TBD add scroll direction config
+    const natural = { checked: true };
+
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+
+    const handler = (event: WheelEvent) => {
+      event.preventDefault();
+
+      if (event.ctrlKey) {
+        const multiplier = Math.exp(-event.deltaY / 100);
+
+        setSettings((prev) => ({
+          ...prev,
+          zoom: prev.zoom * multiplier,
+        }));
+        setCurrentOffset((prev) => ({
+          ...prev,
+          x: prev.x * multiplier,
+          y: prev.y * multiplier,
+        }));
+      } else {
+        const direction = natural.checked ? -1 : 1;
+
+        setCurrentOffset((prev) => ({
+          ...prev,
+          x: prev.x - event.deltaX * direction,
+          y: prev.y - event.deltaY * direction,
+        }));
+      }
+    };
+    element.addEventListener("wheel", handler, {
+      passive: false,
+    });
+
+    return () => {
+      element.removeEventListener("wheel", handler);
+    };
+  }, [setSettings]);
 
   return (
     <Stage
+      ref={ref as any}
       width={parentWidth}
       height={parentHeight}
       offsetX={offset.x}
@@ -166,16 +224,62 @@ export const StageController: React.FC<{
         }
       }}
     >
+      {stage.map((page) => {
+        if (!page.active) {
+          return null;
+        }
+        return (
+          // eslint-disable-next-line react/jsx-key
+          <Layer>
+            <PageBasedGrid
+              center={{
+                x: page.konva.x,
+                y: page.konva.y,
+              }}
+              width={parentWidth - 100}
+              height={parentHeight - 100}
+              drawingScale={page.scale}
+              zoom={zoom}
+              drawingUnit={page.unit}
+              gridOffset={{
+                x: offset.x + 50,
+                y: offset.y + 50,
+              }}
+            />
+          </Layer>
+        );
+      })}
+      {stage.map((page) => {
+        if (!page.active || 1) {
+          return null;
+        }
+        return (
+          // eslint-disable-next-line react/jsx-key
+          <Layer>
+            <Grid
+              drawingUnit={page.unit}
+              drawingScale={page.scale}
+              zoom={zoom}
+              width={parentWidth / activePage.scale}
+              height={parentHeight / activePage.scale}
+              scale={activePage.scale}
+              gridSize={10}
+              offsetX={gridOffset.x}
+              offsetY={gridOffset.y}
+            />
+          </Layer>
+        );
+      })}
       <Layer>
         {stage.map((page, index) => (
           <>
             <Rect
               stroke={page.active ? theme.primary : theme.content}
               strokeWidth={1}
-              height={getPixelsInPaperSpace(page.height, page.unit)}
-              width={getPixelsInPaperSpace(page.width, page.unit)}
-              x={getPixelsInPaperSpace(page.position.x, "cm")}
-              y={getPixelsInPaperSpace(page.position.y, "cm")}
+              height={page.konva.height}
+              width={page.konva.width}
+              x={page.konva.x}
+              y={page.konva.y}
               onClick={() => setActivePageIndex(index)}
             />
             {page.children.map((obj) => (
