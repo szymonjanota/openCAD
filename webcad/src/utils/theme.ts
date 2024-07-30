@@ -4,6 +4,8 @@ export interface ThemeColors {
   base100: string;
   base200: string;
   base300: string;
+  baseContent: string;
+  primary:string;
 }
 
 export const getColors = <ColorMap extends Record<string, string>>(
@@ -28,4 +30,6 @@ export const extractColorsFromCssStyle = (
     base100: "--b1",
     base200: "--b2",
     base300: "--b3",
+    baseContent: "--bc",
+    primary: '--p'
   });

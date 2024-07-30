@@ -1,23 +1,95 @@
-import { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { Stage, Layer, Line, Rect } from "react-konva";
-import { Grid } from "./Grid";
-import { DrawingContext } from "./DrawingContextProvider";
+import { DrawingContext, useDrawingContext } from "./DrawingContextProvider";
 import { Vector2D } from "@/utils/vector-2d";
+import { Unit } from "@/units";
+import { useThemeContext } from "./ThemeProvider";
+import { Grid } from "./Grid";
+
+interface Line {
+  start: Vector2D; // in drawing scale unit
+  end: Vector2D; // in drawing scale unit
+  stroke: string;
+  strokeWidth: number; // in paper scale unit
+}
+
+interface Page {
+  scale: number;
+  height: number;
+  width: number;
+  unit: Unit;
+  position: Vector2D;
+  children: Line[];
+}
+
+const STAGE: Page[] = [
+  {
+    scale: 1 / 2,
+    height: 210,
+    width: 297,
+    unit: "mm",
+    position: {
+      x: 22,
+      y: 0,
+    },
+    children: [
+      {
+        start: { x: 0, y: 0 },
+        end: {
+          x: 594,
+          y: 420,
+        },
+        stroke: "red",
+        strokeWidth: 2,
+      },
+    ],
+  },
+  {
+    scale: 1 / 50,
+    height: 297,
+    width: 210,
+    unit: "mm",
+    position: {
+      x: 0,
+      y: 0,
+    },
+    children: [
+      {
+        start: { x: 100, y: 100 },
+        end: {
+          x: 100,
+          y: 9900,
+        },
+        stroke: "red",
+        strokeWidth: 2,
+      },
+    ],
+  },
+];
 
 export const StageController: React.FC<{
   parentWidth: number;
   parentHeight: number;
 }> = ({ parentHeight, parentWidth }) => {
-  const ctx = useContext(DrawingContext);
-  if (!ctx) {
-    throw new Error("NO CTX");
-  }
+  const theme = useThemeContext();
+  const drawingContext = useDrawingContext();
+
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const stage = useMemo(
+    () =>
+      STAGE.map((page, index) => ({
+        active: index === activePageIndex,
+        ...page,
+      })),
+    [activePageIndex]
+  );
+  const activePage = stage.find((page) => page.active)!;
+
   const {
-    settings: { currentUnit, drawingScale, zoom },
-    scale,
+    settings: { currentUnit, zoom },
     getPixelsInDrawingSpace,
     getPixelsInPaperSpace,
-  } = ctx;
+  } = drawingContext;
 
   const [currentOffset, setCurrentOffset] = useState({
     x: 0,
@@ -44,7 +116,7 @@ export const StageController: React.FC<{
   const offset = Vector2D.add(centerOffset, viewOffset);
   const gridOffset = Vector2D.div(
     Vector2D.add(centerOffset, viewOffset),
-    scale
+    activePage.scale
   );
 
   return (
@@ -95,7 +167,42 @@ export const StageController: React.FC<{
       }}
     >
       <Layer>
-        <Line
+        {stage.map((page, index) => (
+          <>
+            <Rect
+              stroke={page.active ? theme.primary : theme.content}
+              strokeWidth={1}
+              height={getPixelsInPaperSpace(page.height, page.unit)}
+              width={getPixelsInPaperSpace(page.width, page.unit)}
+              x={getPixelsInPaperSpace(page.position.x, "cm")}
+              y={getPixelsInPaperSpace(page.position.y, "cm")}
+              onClick={() => setActivePageIndex(index)}
+            />
+            {page.children.map((obj) => (
+              // eslint-disable-next-line react/jsx-key
+              <Line
+                points={[
+                  getPixelsInDrawingSpace(obj.start.x, page.unit, page.scale) +
+                    getPixelsInPaperSpace(page.position.x, "cm"),
+                  getPixelsInDrawingSpace(obj.start.y, page.unit, page.scale) +
+                    getPixelsInPaperSpace(page.position.y, "cm"),
+                  getPixelsInDrawingSpace(obj.end.x, page.unit, page.scale) +
+                    getPixelsInPaperSpace(page.position.x, "cm"),
+                  getPixelsInDrawingSpace(obj.end.y, page.unit, page.scale) +
+                    getPixelsInPaperSpace(page.position.y, "cm"),
+                ]}
+                stroke="red"
+                strokeEnabled
+                strokeWidth={Math.max(
+                  getPixelsInPaperSpace(0.05, page.unit),
+                  1
+                )}
+                strokeScaleEnabled={false}
+              />
+            ))}
+          </>
+        ))}
+        {/* <Line
           points={[
             0,
             0,
@@ -118,7 +225,7 @@ export const StageController: React.FC<{
           strokeEnabled
           strokeWidth={1}
           strokeScaleEnabled={false}
-        />
+        /> */}
       </Layer>
       <Layer offsetX={-offset.x} offsetY={-offset.y}>
         {movePath && (
@@ -133,25 +240,12 @@ export const StageController: React.FC<{
               movePath.current.x,
               movePath.current.y,
             ]}
-            stroke="white"
+            stroke={theme.content}
             strokeEnabled
             strokeWidth={2}
             strokeScaleEnabled={false}
           />
         )}
-      </Layer>
-      <Layer scaleX={scale} scaleY={scale}>
-        <Grid
-          drawingUnit={currentUnit}
-          drawingScale={drawingScale}
-          zoom={zoom}
-          width={parentWidth / scale}
-          height={parentHeight / scale}
-          scale={scale}
-          gridSize={10}
-          offsetX={gridOffset.x}
-          offsetY={gridOffset.y}
-        />
       </Layer>
     </Stage>
   );

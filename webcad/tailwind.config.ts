@@ -14,14 +14,15 @@ const config: Config = {
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
       gridTemplateColumns: {
-        "canvas-container": "minmax(0, auto) minmax(0, auto) minmax(0, 1fr) minmax(0, auto)",
+        "canvas-container":
+          "minmax(0, auto) minmax(0, auto) minmax(0, 1fr) minmax(0, auto)",
       },
     },
   },
   plugins: [require("daisyui")],
   daisyui: {
-    themes: ["light", "dark", ],
-    darkTheme: 'dark',
+    themes: ["dark"],
+    darkTheme: "dark",
   },
 };
 export default config;

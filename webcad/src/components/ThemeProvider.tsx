@@ -1,15 +1,18 @@
+import { createReactContext, createUseContextHook } from "@/utils/context";
 import { ThemeColors } from "@/utils/theme";
-import React from "react";
+import React, { useContext } from "react";
 
 const createTheme = (colors: ThemeColors) => {
   return {
     canvasBackgroundColor: colors.base100,
+    content: colors.baseContent,
+    primary: colors.primary,
   };
 };
 
 export type Theme = ReturnType<typeof createTheme>;
 
-const ThemeContext = React.createContext<Theme | null>(null);
+const ThemeContext = createReactContext<Theme>("ThemeContext");
 
 export const ThemeProvider: React.FC<
   React.PropsWithChildren<{ colors: ThemeColors }>
@@ -18,3 +21,5 @@ export const ThemeProvider: React.FC<
     {children}
   </ThemeContext.Provider>
 );
+
+export const useThemeContext = createUseContextHook(ThemeContext);
