@@ -1,6 +1,5 @@
-import { convertUnit } from "@/units";
 import { useContext, useState } from "react";
-import { Stage, Layer, Line } from "react-konva";
+import { Stage, Layer, Line, Rect } from "react-konva";
 import { Grid } from "./Grid";
 import { DrawingContext } from "./DrawingContextProvider";
 import { Vector2D } from "@/utils/vector-2d";
@@ -16,6 +15,8 @@ export const StageController: React.FC<{
   const {
     settings: { currentUnit, drawingScale, zoom },
     scale,
+    getPixelsInDrawingSpace,
+    getPixelsInPaperSpace,
   } = ctx;
 
   const [currentOffset, setCurrentOffset] = useState({
@@ -93,6 +94,32 @@ export const StageController: React.FC<{
         }
       }}
     >
+      <Layer>
+        <Line
+          points={[
+            0,
+            0,
+            getPixelsInPaperSpace(29.7, "cm"),
+            getPixelsInPaperSpace(21, "cm"),
+          ]}
+          stroke="red"
+          strokeEnabled
+          strokeWidth={1}
+          strokeScaleEnabled={false}
+        />
+        <Line
+          points={[
+            0,
+            50,
+            getPixelsInDrawingSpace(29.7, "cm"),
+            50 + getPixelsInDrawingSpace(21, "cm"),
+          ]}
+          stroke="green"
+          strokeEnabled
+          strokeWidth={1}
+          strokeScaleEnabled={false}
+        />
+      </Layer>
       <Layer offsetX={-offset.x} offsetY={-offset.y}>
         {movePath && (
           <Line
@@ -106,9 +133,9 @@ export const StageController: React.FC<{
               movePath.current.x,
               movePath.current.y,
             ]}
-            stroke="red"
+            stroke="white"
             strokeEnabled
-            strokeWidth={10}
+            strokeWidth={2}
             strokeScaleEnabled={false}
           />
         )}

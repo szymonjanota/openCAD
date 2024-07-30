@@ -19,7 +19,7 @@ const useSettings = () => {
   }>({
     drawingScale: 1 / 2,
     currentUnit: "mm",
-    zoom: 2,
+    zoom: 1 / 2,
     devicePhysicalPixelsPerIn: 254,
     devicePhysicalPixelPerCssPixelRatio: window.devicePixelRatio,
   });
@@ -38,7 +38,25 @@ const useSettings = () => {
       devicePhysicalPixelsPerIn / devicePhysicalPixelPerCssPixelRatio;
     const scale = currentUnitScalePerIn * pxPerIn * drawingScale * zoom;
 
-    return { settings, scale, setSettings };
+    const getPixelsInPaperSpace = (value: number, unit: Unit) => {
+      const PX_PER_IN =
+        devicePhysicalPixelsPerIn / devicePhysicalPixelPerCssPixelRatio;
+      return PX_PER_IN * convertUnit(value, unit, "inch") * zoom;
+    };
+
+    const getPixelsInDrawingSpace = (value: number, unit: Unit) => {
+      const PX_PER_IN =
+        devicePhysicalPixelsPerIn / devicePhysicalPixelPerCssPixelRatio;
+      return PX_PER_IN * convertUnit(value, unit, "inch") * zoom * drawingScale;
+    };
+
+    return {
+      settings,
+      scale,
+      setSettings,
+      getPixelsInDrawingSpace,
+      getPixelsInPaperSpace,
+    };
   }, [settings]);
 };
 
