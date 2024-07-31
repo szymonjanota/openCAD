@@ -29,8 +29,8 @@ const STAGE: Page[] = [
     width: 297,
     unit: "mm",
     position: {
-      x: 22,
-      y: 0,
+      x: 22.131234,
+      y: 1.2131231,
     },
     children: [
       {

@@ -6,6 +6,7 @@ import { convertUnit, Unit } from "@/units";
 import { rountToNearest } from "@/utils/math";
 import { Vector2D } from "@/utils/vector-2d";
 import { useDrawingContext } from "./DrawingContextProvider";
+import { useThemeContext } from "./ThemeProvider";
 
 const majorDivide = 10;
 
@@ -45,6 +46,11 @@ const THEME = {
   },
 };
 
+const withOffset = (center: number, gridSize: number) => {
+  const offset = Math.abs(rountToNearest(center, gridSize) - center);
+  return (value: number): number => value + offset;
+};
+
 export const PageBasedGrid: React.FC<{
   center: Vector2D;
   drawingUnit: Unit;
@@ -54,10 +60,11 @@ export const PageBasedGrid: React.FC<{
   height: number;
   gridOffset: Vector2D;
 }> = ({ width, height, zoom, gridOffset, center, drawingScale }) => {
-  const { getPixelsInDrawingSpace, getPixelsInPaperSpace, setSettings } =
-    useDrawingContext();
-  let gridSize = getPixelsInDrawingSpace(1, "cm", drawingScale);
-  while (gridSize < 100) {
+  const theme = useThemeContext();
+
+  const { getPixelsInDrawingSpace } = useDrawingContext();
+  let gridSize = getPixelsInDrawingSpace(0.1, "mm", drawingScale);
+  while (gridSize < 10) {
     gridSize *= 10;
   }
 
@@ -65,12 +72,18 @@ export const PageBasedGrid: React.FC<{
   //   setInterval(() => setSettings((p) => ({ ...p, zoom: p.zoom / 2 })), 10_000);
   // }, [setSettings]);
 
-  console.log({ gridSize });
   const xRange = _.range(
     rountToNearest(gridOffset.x, gridSize),
     width + gridOffset.x,
     gridSize
-  );
+  ).map(withOffset(center.x, gridSize));
+
+  const yRange = _.range(
+    rountToNearest(gridOffset.y, gridSize),
+    height + gridOffset.y,
+    gridSize
+  ).map(withOffset(center.y, gridSize));
+
   return (
     <>
       <Rect
@@ -79,16 +92,23 @@ export const PageBasedGrid: React.FC<{
         width={width}
         height={height}
         stroke={"yellow"}
-        strokeWidth={10}
+        strokeWidth={2}
       />
       {xRange.map((value) => (
         <Line
           points={[value, gridOffset.y, value, gridOffset.y + height]}
-          stroke="green"
+          stroke={theme.minorGridColor}
           strokeWidth={1}
         />
       ))}
-      <Circle x={center.x} y={center.y} radius={10} fill={"red"} />
+      {yRange.map((value) => (
+        <Line
+          points={[gridOffset.x, value, gridOffset.x + width, value]}
+          stroke={theme.minorGridColor}
+          strokeWidth={1}
+        />
+      ))}
+      <Circle x={center.x} y={center.y} radius={2} fill={"red"} />
     </>
   );
 };

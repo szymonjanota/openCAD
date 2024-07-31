@@ -5,6 +5,8 @@ import React, { useContext } from "react";
 const createTheme = (colors: ThemeColors) => {
   return {
     canvasBackgroundColor: colors.base100,
+    minorGridColor: colors.base200,
+    majorGridColor: colors.base300,
     content: colors.baseContent,
     primary: colors.primary,
   };
