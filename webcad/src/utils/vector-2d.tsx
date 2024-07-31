@@ -30,17 +30,19 @@ export const Vector2D = {
       y: vector.y / value.y,
     };
   },
-  add: (vector: Vector2D, value: number | Vector2D): Vector2D => {
-    if (typeof value === "number") {
+  add: (vector: Vector2D, ...values: (number | Vector2D)[]): Vector2D => {
+    return values.reduce<Vector2D>((prev, value) => {
+      if (typeof value === "number") {
+        return {
+          x: prev.x + value,
+          y: prev.y + value,
+        };
+      }
       return {
-        x: vector.x + value,
-        y: vector.y + value,
+        x: prev.x + value.x,
+        y: prev.y + value.y,
       };
-    }
-    return {
-      x: vector.x + value.x,
-      y: vector.y + value.y,
-    };
+    }, vector);
   },
   sub: (vector: Vector2D, value: Vector2D): Vector2D => {
     if (typeof value === "number") {

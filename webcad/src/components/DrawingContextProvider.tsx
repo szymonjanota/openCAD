@@ -42,9 +42,7 @@ const useSettings = () => {
     const scale = currentUnitScalePerIn * pxPerIn * zoom;
 
     const getPixelsInPaperSpace = (value: number, unit: Unit) => {
-      const PX_PER_IN =
-        devicePhysicalPixelsPerIn / devicePhysicalPixelPerCssPixelRatio;
-      return PX_PER_IN * convertUnit(value, unit, "inch") * zoom;
+      return pxPerIn * convertUnit(value, unit, "inch") * zoom;
     };
 
     const getPixelsInDrawingSpace = (
@@ -52,9 +50,15 @@ const useSettings = () => {
       unit: Unit,
       drawingScale: number
     ) => {
-      const PX_PER_IN =
-        devicePhysicalPixelsPerIn / devicePhysicalPixelPerCssPixelRatio;
-      return PX_PER_IN * convertUnit(value, unit, "inch") * zoom * drawingScale;
+      return pxPerIn * convertUnit(value, unit, "inch") * zoom * drawingScale;
+    };
+
+    const getDrawingScaleDistanceFromPixels = (
+      value: number,
+      unit: Unit,
+      drawingScale: number
+    ): number => {
+      return convertUnit(value / pxPerIn / zoom / drawingScale, "inch", unit);
     };
 
     return {
@@ -62,6 +66,7 @@ const useSettings = () => {
       scale,
       setSettings,
       getPixelsInDrawingSpace,
+      getDrawingScaleDistanceFromPixels,
       getPixelsInPaperSpace,
     };
   }, [settings]);

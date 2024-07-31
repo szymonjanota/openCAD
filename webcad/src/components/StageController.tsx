@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Stage, Layer, Line, Rect } from "react-konva";
 import { useDrawingContext } from "./DrawingContextProvider";
 import { Vector2D } from "@/utils/vector-2d";
 import { Unit } from "@/units";
 import { useThemeContext } from "./ThemeProvider";
 import { Grid, PageBasedGrid } from "./Grid";
+import _ from "lodash";
 
 interface Line {
   start: Vector2D; // in drawing scale unit
@@ -73,9 +74,10 @@ export const StageController: React.FC<{
 }> = ({ parentHeight, parentWidth }) => {
   const theme = useThemeContext();
   const {
-    settings: { currentUnit, zoom },
+    settings: { zoom },
     getPixelsInDrawingSpace,
     getPixelsInPaperSpace,
+    getDrawingScaleDistanceFromPixels,
     setSettings,
   } = useDrawingContext();
 
@@ -122,59 +124,39 @@ export const StageController: React.FC<{
       x: parentWidth,
       y: parentHeight,
     },
-    -2
+    2
   );
-  const offset = Vector2D.add(centerOffset, viewOffset);
+  const offset = Vector2D.sub(viewOffset, centerOffset);
   const gridOffset = Vector2D.div(
     Vector2D.add(centerOffset, viewOffset),
     activePage.scale
   );
-  // console.log(gridOffset);
 
   const ref = useRef<HTMLElement>();
 
-  useEffect(() => {
-    // TBD add scroll direction config
-    const natural = { checked: true };
+  const [pointer, setPointer] = useState<Vector2D>({ x: 0, y: 0 });
+  const globalPointerPosition = Vector2D.sub(
+    Vector2D.add(viewOffset, pointer),
+    centerOffset
+  );
 
-    const element = ref.current;
-    if (!element) {
-      return;
-    }
+  const pageLocalPointerPosition = Vector2D.sub(
+    globalPointerPosition,
+    activePage.konva
+  );
 
-    const handler = (event: WheelEvent) => {
-      event.preventDefault();
-
-      if (event.ctrlKey) {
-        const multiplier = Math.exp(-event.deltaY / 100);
-
-        setSettings((prev) => ({
-          ...prev,
-          zoom: prev.zoom * multiplier,
-        }));
-        setCurrentOffset((prev) => ({
-          ...prev,
-          x: prev.x * multiplier,
-          y: prev.y * multiplier,
-        }));
-      } else {
-        const direction = natural.checked ? -1 : 1;
-
-        setCurrentOffset((prev) => ({
-          ...prev,
-          x: prev.x - event.deltaX * direction,
-          y: prev.y - event.deltaY * direction,
-        }));
-      }
-    };
-    element.addEventListener("wheel", handler, {
-      passive: false,
-    });
-
-    return () => {
-      element.removeEventListener("wheel", handler);
-    };
-  }, [setSettings]);
+  const drawingScalePointerPosition = {
+    x: getDrawingScaleDistanceFromPixels(
+      pageLocalPointerPosition.x,
+      "mm",
+      activePage.scale
+    ),
+    y: getDrawingScaleDistanceFromPixels(
+      pageLocalPointerPosition.y,
+      "mm",
+      activePage.scale
+    ),
+  };
 
   return (
     <Stage
@@ -183,6 +165,41 @@ export const StageController: React.FC<{
       height={parentHeight}
       offsetX={offset.x}
       offsetY={offset.y}
+      onWheel={({ evt: event }) => {
+        event.preventDefault();
+
+        if (event.ctrlKey) {
+          const multiplier = Math.exp(-event.deltaY / 100);
+
+          setSettings((prev) => ({
+            ...prev,
+            zoom: prev.zoom * multiplier,
+          }));
+
+          const c1 = Vector2D.sub(
+            Vector2D.add(viewOffset, pointer),
+            centerOffset
+          );
+          const c2 = Vector2D.sub(
+            Vector2D.add(Vector2D.mult(c1, multiplier), centerOffset),
+            pointer
+          );
+
+          setCurrentOffset((prev) => ({
+            ...prev,
+            x: c2.x,
+            y: c2.y,
+          }));
+        } else {
+          const direction = -1; // natural.checked ? -1 : 1;
+
+          setCurrentOffset((prev) => ({
+            ...prev,
+            x: prev.x - event.deltaX * direction,
+            y: prev.y - event.deltaY * direction,
+          }));
+        }
+      }}
       onMouseUp={(e) => {
         if (movePath) {
           setMovePath(null);
@@ -208,6 +225,8 @@ export const StageController: React.FC<{
         if (!point) {
           return;
         }
+
+        setPointer(point);
 
         if (movePath) {
           setMovePath((prevMovePath) =>
@@ -287,13 +306,13 @@ export const StageController: React.FC<{
               <Line
                 points={[
                   getPixelsInDrawingSpace(obj.start.x, page.unit, page.scale) +
-                    getPixelsInPaperSpace(page.position.x, "cm"),
+                    page.konva.x,
                   getPixelsInDrawingSpace(obj.start.y, page.unit, page.scale) +
-                    getPixelsInPaperSpace(page.position.y, "cm"),
+                    page.konva.y,
                   getPixelsInDrawingSpace(obj.end.x, page.unit, page.scale) +
-                    getPixelsInPaperSpace(page.position.x, "cm"),
+                    page.konva.x,
                   getPixelsInDrawingSpace(obj.end.y, page.unit, page.scale) +
-                    getPixelsInPaperSpace(page.position.y, "cm"),
+                    page.konva.y,
                 ]}
                 stroke="red"
                 strokeEnabled
